@@ -68,7 +68,7 @@ local cwVoice = Clockwork.voice;
 local cwChatbox = Clockwork.chatBox;
 
 --[[ Downloads the content addon for clients. --]]
-resource.AddWorkshop("474315121");
+resource.AddWorkshop("1642469693");
 
 --[[ Do this internally, because it's one less step for schemas. --]]
 AddCSLuaFile(cwKernel:GetSchemaGamemodePath().."/cl_init.lua");
@@ -96,7 +96,7 @@ if (system.IsLinux()) then
 	function file.Read(fileName, pathName)
 		local contents = ClockworkFileRead(fileName, pathName);
 		
-		if (contents and string.utf8sub(contents, -1) == "\n") then
+		if (contents and utf8.len(contents) and string.utf8sub(contents, -1) == "\n") then
 			contents = string.utf8sub(contents, 1, -2);
 		end;
 		
@@ -759,6 +759,8 @@ function Clockwork:PlayerFlagsGiven(player, flags)
 	if (string.find(flags, "t") and player:Alive()) then
 		cwPly:GiveSpawnWeapon(player, "gmod_tool");
 	end;
+	
+	player:SetSharedVar("Flags", player:GetFlags());
 end;
 
 --[[
@@ -780,6 +782,8 @@ function Clockwork:PlayerFlagsTaken(player, flags)
 			cwPly:TakeSpawnWeapon(player, "gmod_tool");
 		end;
 	end;
+	
+	player:SetSharedVar("Flags", player:GetFlags());
 end;
 
 --[[
@@ -1948,7 +1952,9 @@ function Clockwork:PlayerDataStreamInfoSent(player)
 					end;
 					
 					for k, v in pairs(player.cwCharacterList) do
-						local shouldDelete = cwPlugin:Call("PlayerAdjustCharacterTable", player, v);
+						cwPlugin:Call("PlayerAdjustCharacterTable", player, v);
+
+						local shouldDelete = cwPlugin:Call("ShouldDeleteCharacter", player, v);
 						
 						if (!shouldDelete) then
 							cwPly:CharacterScreenAdd(player, v);
@@ -3781,11 +3787,11 @@ function Clockwork:EntityHandleMenuOption(player, entity, option, arguments)
 		});
 	elseif (class == "cw_cash" and arguments == "cwCashTake") then
 		if (cwEntity:BelongsToAnotherCharacter(player, entity)) then
-			cwPly:Notify(player, {"DroppedCashOtherChar", L("Cash")});
+			cwPly:Notify(player, {"DroppedCashOtherChar", L(player, "Cash")});
 			return;
 		end;
 		
-		cwPly:GiveCash(player, entity.cwAmount, L("Cash"));
+		cwPly:GiveCash(player, entity.cwAmount, L(player, "Cash"));
 		player:EmitSound("physics/body/body_medium_impact_soft"..math.random(1, 7)..".wav");
 		player:FakePickup(entity);
 		
@@ -3844,7 +3850,7 @@ function Clockwork:PlayerSpawnedProp(player, model, entity)
 			entity:SetOwnerKey(player:GetCharacterKey());
 			
 			if (IsValid(entity)) then
-				cwKernel:PrintLog(LOGTYPE_URGENT, {"LogPlayerSpawnModel", player:Name(), tostring(model)});
+				cwKernel:PrintLog(LOGTYPE_URGENT, {"LogPlayerSpawnedModel", player:Name(), tostring(model)});
 				
 				if (cwConfig:Get("prop_kill_protection"):Get()) then
 					entity.cwDamageImmunity = CurTime() + 60;
@@ -4370,6 +4376,19 @@ function Clockwork:PlayerUseUnknownItemFunction(player, itemTable, itemFunction)
 
 --[[
 	@codebase Server
+	@details Called when deciding whether to automatically delete a character.
+	@param The entity of the player who created the character.
+	@param The character which is being considered for deletion.
+	@returns A boolean indicating whether or not the character should be deleted.
+--]]
+function Clockwork:ShouldDeleteCharacter(player, character)
+	if (!self.faction.stored[character.faction]) then
+		return true;
+	end;
+end;
+
+--[[
+	@codebase Server
 	@details Called when a player's character table should be adjusted.
 	@param {Unknown} Missing description for player.
 	@param {Unknown} Missing description for character.
@@ -4381,8 +4400,6 @@ function Clockwork:PlayerAdjustCharacterTable(player, character)
 		and !cwPly:IsWhitelisted(player, character.faction)) then
 			character.data["CharBanned"] = true;
 		end;
-	else
-		return true;
 	end;
 end;
 
@@ -4423,10 +4440,88 @@ function Clockwork:PlayerAdjustDeathInfo(player, info) end;
 	@returns {Unknown}
 --]]
 function Clockwork:ChatBoxAdjustInfo(info)
+	if (table.HasValue(Clockwork.voices.chatClasses, info.class)) then
+		if (IsValid(info.speaker) and info.speaker:HasInitialized()) then
+			info.text = string.upper(string.sub(info.text, 1, 1))..string.sub(info.text, 2);
+			
+			local voiceGroups = Clockwork.voices:GetAll();
+			local voices;
+
+			for k, v in pairs(voiceGroups) do
+				if (v.IsPlayerMember(info.speaker)) then
+					voices = v.voices;
+
+					break;
+				end;
+			end;
+			
+			for k, v in pairs(voices or {}) do
+				if (string.lower(info.text) == string.lower(v.command)) then
+					local voice = info.voice or {};
+
+					voice.global = voice.global or false;
+					voice.volume = voice.volume or v.volume or 80;
+					voice.sound = voice.sound or v.sound;
+					voice.pitch = voice.pitch or v.pitch;
+					
+					if (v.gender) then
+						if (v.female and info.speaker:QueryCharacter("Gender") == GENDER_FEMALE) then
+							voice.sound = string.Replace(voice.sound, "/male", "/female");
+						end;
+					end;
+					
+					if (info.class == "whisper") then
+						voice.volume = voice.volume * 0.75;
+					elseif (info.class == "yell") then
+						voice.volume = voice.volume * 1.25;
+					end;
+					
+					info.voice = voice;
+
+					if (v.phrase == nil or v.phrase == "") then
+						info.visible = false;
+					else
+						info.text = v.phrase;
+					end;
+
+					break;
+				end;
+			end;
+		end;
+	end;
+
+	info.textTransformer = info.textTransformer or function(text)
+		return text;
+	end;
+
+	info.text = info.textTransformer(info.text);
+	
 	if (info.class == "ic") then
 		cwKernel:PrintLog(LOGTYPE_GENERIC, {"LogPlayerSays", info.speaker:Name(), info.text});
 	elseif (info.class == "looc") then
 		cwKernel:PrintLog(LOGTYPE_GENERIC, {"LogPlayerSaysLOOC", info.speaker:Name(), info.text});
+	end;
+end;
+
+--[[
+	@codebase Shared
+	@details Called when a chat box message has been added.
+	@param {Unknown} Missing description for info.
+	@returns {Unknown}
+--]]
+function Clockwork:ChatBoxMessageAdded(info)
+	if (info.voice and info.voice.sound) then
+		if (IsValid(info.speaker) and info.speaker:HasInitialized()) then
+			info.speaker:EmitSound(info.voice.sound, info.voice.volume, info.voice.pitch);
+		end;
+		
+		if (info.voice.global) then
+			for k, v in pairs(info.listeners) do
+				if (v != info.speaker) then
+					Clockwork.player:PlaySound(v, info.voice.sound);
+				end;
+			end;
+		end;
 	end;
 end;
 
@@ -4731,7 +4826,7 @@ end
 	@returns {Unknown}
 --]]
 function Clockwork:ShutDown()
-	self.ShuttingDown = true;
+	Clockwork.ShuttingDown = true;
 end;
 
 --[[

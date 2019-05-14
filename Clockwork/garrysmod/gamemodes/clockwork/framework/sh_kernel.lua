@@ -192,24 +192,21 @@ end;
 	@returns {Unknown}
 --]]
 function Clockwork.kernel:FormatCash(amount, singular, lowerName)
-	local output = "";
+	local output = {};
+	local cashName = Clockwork.option:GetKey("name_cash");
 
 	if (SERVER) then
 		if (singular) then
 			output = {"CashAmountSingular", amount};
 		else
-			output = {"CashAmount", amount};
+			output = {"CashAmount", amount, lowerName and string.lower(cashName) or cashName};
 		end;
 	else
 		if (singular) then
 			output = L("CashAmountSingular", amount);
 		else
-			output = L("CashAmount", amount);
+			output = L("CashAmount", amount, lowerName and string.lower(cashName) or cashName);
 		end;
-	end;
-
-	if (lowerName) then
-		return string.lower(output);
 	end;
 
 	return output;
@@ -1082,7 +1079,7 @@ if (SERVER) then
 		SCHEMA_GAMEMODE_INFO["name"] = schemaData["title"] or "Undefined";
 		SCHEMA_GAMEMODE_INFO["author"] = schemaData["author"] or "Undefined";
 		SCHEMA_GAMEMODE_INFO["description"] = schemaData["description"] or "Undefined";
-		SCHEMA_GAMEMODE_INFO["version"] = schemaData["version"] or "Undefined";
+		SCHEMA_GAMEMODE_INFO["version"] = schemaData["version"] and math.Round(schemaData["version"], 6) or "Undefined";
 		
 		return SCHEMA_GAMEMODE_INFO;
 	end;
@@ -3348,7 +3345,7 @@ else
 				
 				if (IsValid(subMenu)) then
 					if (arguments.toolTip) then
-						subMenu:SetToolTip(arguments.toolTip);
+						subMenu:SetToolTip(T(arguments.toolTip));
 					end;
 				end;
 			else
@@ -3366,7 +3363,7 @@ else
 				local panel = menuPanel.Items[#menuPanel.Items];
 				
 				if (IsValid(panel) and arguments.toolTip) then
-					panel:SetToolTip(arguments.toolTip);
+					panel:SetToolTip(T(arguments.toolTip));
 				end;
 			end;
 		end, minimumWidth);
@@ -5199,10 +5196,16 @@ end;
 	@returns {Unknown}
 --]]
 function Clockwork.kernel:ValidateTableKeys(baseTable)
+	local invalidKeys = {};
+
 	for i = 1, #baseTable do
 		if (!baseTable[i]) then
-			tableRemove(baseTable, i);
+			tableInsert(invalidKeys, i);
 		end;
+	end;
+
+	for i = #invalidKeys, 1, -1 do
+		tableRemove(baseTable, invalidKeys[i]);
 	end;
 end;
 
@@ -5330,7 +5333,7 @@ function Clockwork.kernel:SetSharedVar(key, value, sharedTable)
 				end;
 				local success, err = pcall(_G["SetGlobal"..class], key, value);
 				if (!success) then
-					MsgC(Color(255, 100, 0, 255), "[Clockwork:GlobalSharedVars] Attempted to set SharedVar '"..key.."'' of type '"..class.."'' with value of type '"..type(value).."'.\n"..err.."\n");
+					MsgC(Color(255, 100, 0, 255), "[Clockwork:GlobalSharedVars] Attempted to set SharedVar '"..key.."' of type '"..class.."' with value of type '"..type(value).."'.\n"..err.."\n");
 				end;
 				return;
 			end;

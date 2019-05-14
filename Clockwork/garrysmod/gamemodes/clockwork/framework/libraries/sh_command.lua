@@ -137,10 +137,6 @@ function Clockwork.command:Register(data, name)
 	self.stored[uniqueID].access = data.access or "b";
 	self.stored[uniqueID].arguments = data.arguments or 0;
 
-	if (CLIENT) then
-		self:AddHelp(self.stored[uniqueID]);
-	end;
-
 	return self.stored[uniqueID];
 end;
 
@@ -310,7 +306,7 @@ if (SERVER) then
 									Clockwork.player:Notify(player, {"NoAccessToCommand", player:Name()});
 								end;
 							else
-								Clockwork.player:Notify(player, commandTable.name.." "..commandTable.text.."!");
+								Clockwork.player:Notify(player, commandTable.name.." "..L(player, commandTable.text).."!");
 							end;
 						end;
 					elseif (!Clockwork.player:GetDeathCode(player, true)) then
@@ -361,8 +357,9 @@ else
 					<div class="cwCodeText">
 						<i><lang>]]..text..[[</lang></i>
 					</div>
-					]]..commandTable.tip..[[
+					<lang>]]..commandTable.tip..[[</lang>
 				</div>
+				<br>
 			]], true, commandTable.name);
 		end;
 	end;

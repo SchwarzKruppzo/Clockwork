@@ -448,7 +448,7 @@ CW_KOREAN["OwnedDoorText"] = "이 문은 이미 누군가가 소유하고 있습
 CW_KOREAN["UnownableDoorText"] = "이 문은 소유할 수 없습니다.";
 CW_KOREAN["Door"] = "문";
 
-CW_KOREAN["CreateCharacterStage1"] = "설득";
+CW_KOREAN["CreateCharacterStage1"] = "성별 및 팩션";
 CW_KOREAN["CreateCharacterStage2"] = "설명";
 CW_KOREAN["CreateCharacterStage3"] = "팩션";
 CW_KOREAN["CreateCharacterStage4"] = "능력치";
@@ -1020,11 +1020,11 @@ CW_KOREAN["CmdWDesc"] = "<문자열 텍스트>";
 CW_KOREAN["CmdY"] = "주변 캐릭터들에게 외칩니다.";
 CW_KOREAN["CmdYDesc"] = "<문자열 텍스트>";
 
-CW_KOREAN["PlayerInfoCash"] = "돈: %1";
-CW_KOREAN["PlayerInfoWages"] = "월급: %1";
-CW_KOREAN["PlayerInfoName"] = "%1";
-CW_KOREAN["PlayerInfoClass"] = "%1";
+CW_KOREAN["PlayerInfoCash"] = "#1: #2";
+CW_KOREAN["PlayerInfoWages"] = "#1: #2";
+CW_KOREAN["PlayerInfoName"] = "#1";
+CW_KOREAN["PlayerInfoClass"] = "#1";
 
-CW_KOREAN["CashAmountSingular"] = "$%1";
-CW_KOREAN["CashAmount"] = "%1 돈";
+CW_KOREAN["CashAmountSingular"] = "$#1";
+CW_KOREAN["CashAmount"] = "#1 #2";
 CW_KOREAN["Cash"] = "돈";

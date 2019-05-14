@@ -2135,7 +2135,8 @@ function Clockwork.player:SetWhitelisted(player, faction, isWhitelisted)
 	else
 		for k, v in pairs(whitelisted) do
 			if (v == faction) then
-				whitelisted[k] = nil;
+				table.remove(whitelisted, k);
+				break;
 			end;
 		end;
 	end;
@@ -3560,6 +3561,7 @@ function Clockwork.player:SetName(player, name, saveless)
 	local newName = name;
 	
 	player:SetCharacterData("Name", newName, true);
+	player:SetSharedVar("Name", newName);
 	
 	if (!player.cwFirstSpawn) then
 		cwPlugin:Call("PlayerNameChanged", player, previousName, newName);
